@@ -1,11 +1,23 @@
-pandas
-numpy
-scikit-learn
-xgboost
+# NBA MVP Predictor
+# Python dependencies for data collection, modeling, visualization, and testing.
+
+# Data collection and web scraping
 requests
 beautifulsoup4
 lxml
-plotly
-streamlit
+
+# Data manipulation and numerical computing
+pandas
+numpy
+
+# Machine learning and model storage
+scikit-learn
+xgboost
 joblib
+
+# Interactive dashboard and visualizations
+streamlit
+plotly
+
+# Testing
 pytest
