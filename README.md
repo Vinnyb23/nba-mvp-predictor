@@ -2,7 +2,7 @@
 
 A machine learning project that predicts historical NBA Most Valuable Player winners from player and team statistics — built end-to-end in Python, from raw historical data to a deployed interactive app.
 
-**Live app:** _add your Streamlit Cloud URL here_
+**Live app:** (https://nba-mvp-predictor-5k83qxa87cdfxnuxphravg.streamlit.app/)
 
 ## Overview
 
