@@ -49,8 +49,12 @@ with col2:
     st.metric("Real MVP Winner", actual_winner)
     predicted_mvp = top5.iloc[0]['player']
     if actual_winner != "Not yet available":
-        result = "Correct" if predicted_mvp == actual_winner else "Missed"
-        st.metric("Model's #1 Pick", predicted_mvp, delta=result)
+        if predicted_mvp == actual_winner:
+            st.success(f"✅ Correct — model's #1 pick ({predicted_mvp}) matches the actual winner.")
+        else:
+            st.error(f"❌ Missed — model picked {predicted_mvp}, actual winner was {actual_winner}.")
+    else:
+        st.info("Actual result not yet available for this season.")
 
 st.divider()
 st.subheader("What drives the model's predictions")
