@@ -61,4 +61,37 @@ st.subheader("What drives the model's predictions")
 importance = pd.Series(model.feature_importances_, index=feature_cols).sort_values(ascending=False).head(10)
 st.bar_chart(importance)
 
+GLOSSARY = {
+    "age": "Player's age during that season",
+    "pts_per_game": "Points per game",
+    "ast_per_game": "Assists per game",
+    "trb_per_game": "Total rebounds per game",
+    "stl_per_game": "Steals per game",
+    "blk_per_game": "Blocks per game",
+    "tov_per_game": "Turnovers per game",
+    "fg_percent": "Field goal percentage",
+    "x3p_percent": "Three-point field goal percentage",
+    "ft_percent": "Free throw percentage",
+    "per": "Player Efficiency Rating — all-in-one per-minute productivity rating, league average = 15",
+    "ts_percent": "True Shooting % — shooting efficiency across 2s, 3s, and free throws combined",
+    "usg_percent": "Usage % — estimated share of team plays used by a player while on the floor",
+    "ows": "Offensive Win Shares — estimated wins contributed through offense",
+    "dws": "Defensive Win Shares — estimated wins contributed through defense",
+    "ws": "Win Shares — total estimated wins contributed (offense + defense)",
+    "ws_48": "Win Shares per 48 minutes — Win Shares rate normalized to a full game",
+    "obpm": "Offensive Box Plus/Minus — offensive points per 100 possessions above a league-average player",
+    "dbpm": "Defensive Box Plus/Minus — same, for defense",
+    "bpm": "Box Plus/Minus — total contribution per 100 possessions above a league-average player",
+    "vorp": "Value Over Replacement Player — total points contributed above a replacement-level player, prorated to an 82-game season",
+    "win_pct": "Team's winning percentage that season",
+    "srs": "Simple Rating System — team rating based on point differential adjusted for strength of schedule",
+}
+
+with st.expander("What do these stats mean?"):
+    glossary_df = pd.DataFrame(
+        [(feat, GLOSSARY.get(feat, "")) for feat in importance.index],
+        columns=["Stat", "Meaning"]
+    )
+    st.table(glossary_df.set_index("Stat"))
+
 st.caption("Data: NBA Stats (1947-present) by sumitrodatta on Kaggle, sourced from Basketball-Reference.")
