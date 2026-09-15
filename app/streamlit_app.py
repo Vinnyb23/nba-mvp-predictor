@@ -23,6 +23,27 @@ st.write("Predicting historical NBA MVP winners from player stats using a Random
 seasons = sorted(df['season'].unique(), reverse=True)
 selected_season = st.selectbox("Select a season", seasons)
 
+st.divider()
+st.subheader("2026-27 Season: Real Market Odds")
+st.caption("The model above predicts historical MVP winners from completed-season stats. The 2026-27 season hasn't started yet, so there's no season-average data for it — instead, here's what real sportsbooks currently think, as a preview of who's favored.")
+
+odds_df = pd.read_csv("data/mvp_odds.csv")
+latest_date = odds_df["as_of_date"].max()
+latest_odds = odds_df[odds_df["as_of_date"] == latest_date].sort_values("consensus_implied_prob", ascending=False)
+
+st.bar_chart(latest_odds.set_index("player")["consensus_implied_prob"])
+st.dataframe(
+    latest_odds[["player", "consensus_odds_american", "consensus_implied_prob"]]
+    .rename(columns={
+        "player": "Player",
+        "consensus_odds_american": "Consensus Odds",
+        "consensus_implied_prob": "Implied Win Probability"
+    })
+    .set_index("Player"),
+    use_container_width=True
+)
+st.caption(f"Odds as of {latest_date}, averaged across DraftKings, FanDuel, BetMGM, Caesars, and ESPN BET futures markets. Snapshot refreshed periodically, not live.")
+
 season_df = df[df['season'] == selected_season].copy()
 X = season_df[feature_cols].fillna(0)
 season_df['predicted_share'] = model.predict(X)
