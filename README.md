@@ -38,6 +38,18 @@ Every season, the NBA MVP is decided by a media voting panel based on a mix of i
 
    Random Forest was selected as the final model based on this more rigorous evaluation.
 
+## Hyperparameter tuning
+
+The Random Forest was tuned using `RandomizedSearchCV` (40 candidates x 5 folds, grouped by season with `GroupKFold` so no season's rows leaked across train/validation splits within the search) on the training seasons only, optimizing for RMSE:
+
+| | Default RF | Tuned RF |
+|---|---|---|
+| Params | `n_estimators=300, max_depth=6` | `n_estimators=300, max_depth=8, min_samples_split=5, min_samples_leaf=4, max_features=1.0` |
+| Holdout top-1 hit rate (2016-2025) | 80.0% (8/10) | 80.0% (8/10) |
+| **LOSO top-1 hit rate (1981-2025, 45 seasons)** | **71.1% (32/45)** | 68.9% (31/45) |
+
+The tuned model achieved a lower training-fold RMSE but a *worse* LOSO top-1 hit rate than the untuned default model. This is a useful reminder that RMSE (how close predicted vote share is on average) and top-1 ranking accuracy (whether the single highest-predicted player is the actual winner) aren't the same objective — optimizing for one doesn't guarantee improving the other, especially with a small dataset (~45 MVP seasons) where estimates carry meaningful noise. **The default-parameter Random Forest was kept as the final model** based on this more rigorous, task-relevant evaluation.
+
 ## Features used
 
 Per-game: points, assists, rebounds, steals, blocks, turnovers, FG%/3P%/FT%
@@ -55,35 +67,3 @@ A Streamlit app lets you pick any season from 1981–2025 and see:
 - Which stats the model weighs most heavily (feature importance chart)
 
 ## Repository structure
-
-```
-nba-mvp-predictor/
-├── data/
-│   └── processed/
-│       └── mvp_model_data.csv   # cleaned, modeling-ready season-level table
-├── notebooks/                    # data prep, EDA, and modeling notebooks (Colab)
-├── src/                          # reusable data prep / feature / training scripts
-├── app/
-│   └── streamlit_app.py          # the deployed Streamlit app
-├── models/
-│   ├── rf_mvp_model.joblib        # trained Random Forest model
-│   └── feature_cols.joblib        # feature list used at inference time
-├── requirements.txt
-└── README.md
-```
-
-## Running locally
-
-```bash
-pip install -r requirements.txt
-streamlit run app/streamlit_app.py
-```
-
-## Limitations & future work
-
-- The model only uses box-score-derived stats; it can't capture narrative factors (media storylines, "turn"/fatigue effects, close-race voter fatigue) that occasionally swing real voting, which explains most of its misses (e.g., 2018, 2019, 2020, 2023, 2025).
-- Potential next steps: live in-season prediction using current-year stats, hyperparameter tuning, and incorporating additional context like strength of schedule or clutch-performance stats.
-
-## Acknowledgments
-
-Built as a personal learning project to understand end-to-end applied machine learning: data acquisition, feature engineering, model comparison, rigorous cross-validation, and deployment.
