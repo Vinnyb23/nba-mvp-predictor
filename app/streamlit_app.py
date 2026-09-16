@@ -20,148 +20,164 @@ df = load_data()
 st.title("🏀 NBA MVP Predictor")
 st.write("Predicting historical NBA MVP winners from player stats using a Random Forest model trained on seasons 1981-2025 (leave-one-season-out validated hit rate: ~71%).")
 
-st.divider()
-st.subheader("What-if: adjust a player's stats")
-st.caption("Pick a real player-season as a starting point, then tweak key stats to see how the model's predicted MVP share reacts.")
+tab1, tab2, tab3 = st.tabs([
+    "Model's Top 5 Predictions",
+    "2026-27 Market Odds",
+    "What-If Explorer"
+])
 
-whatif_col1, whatif_col2 = st.columns(2)
-with whatif_col1:
-    whatif_season = st.selectbox("Base season", sorted(df["season"].unique(), reverse=True), key="whatif_season")
-with whatif_col2:
-    season_players = sorted(df[df["season"] == whatif_season]["player"].unique())
-    whatif_player = st.selectbox("Base player", season_players, key="whatif_player")
+# ============================================================
+# TAB 1: Model's Top 5 Predicted MVP Candidates
+# ============================================================
+with tab1:
+    seasons = sorted(df['season'].unique(), reverse=True)
+    selected_season = st.selectbox("Select a season", seasons)
 
-base_row = df[(df["season"] == whatif_season) & (df["player"] == whatif_player)].iloc[0]
+    season_df = df[df['season'] == selected_season].copy()
+    X = season_df[feature_cols].fillna(0)
+    season_df['predicted_share'] = model.predict(X)
 
-st.markdown("**Adjust key stats:**")
-slider_col1, slider_col2 = st.columns(2)
-with slider_col1:
-    pts = st.slider("Points per game", 0.0, 40.0, float(base_row["pts_per_game"]), 0.1)
-    ast = st.slider("Assists per game", 0.0, 15.0, float(base_row["ast_per_game"]), 0.1)
-    trb = st.slider("Rebounds per game", 0.0, 20.0, float(base_row["trb_per_game"]), 0.1)
-    win_pct = st.slider("Team win %", 0.0, 1.0, float(base_row["win_pct"]), 0.01)
-with slider_col2:
-    ws = st.slider("Win Shares", 0.0, 20.0, float(base_row["ws"]), 0.1)
-    vorp = st.slider("VORP", -2.0, 12.0, float(base_row["vorp"]), 0.1)
-    bpm = st.slider("Box Plus/Minus", -5.0, 15.0, float(base_row["bpm"]), 0.1)
-    per = st.slider("PER", 0.0, 35.0, float(base_row["per"]), 0.1)
+    top5 = season_df.sort_values('predicted_share', ascending=False).head(5)
+    actual_winner_row = season_df[season_df['winner'] == True]
+    actual_winner = actual_winner_row['player'].values[0] if len(actual_winner_row) > 0 else "Not yet available"
 
-whatif_row = base_row[feature_cols].copy()
-whatif_row["pts_per_game"] = pts
-whatif_row["ast_per_game"] = ast
-whatif_row["trb_per_game"] = trb
-whatif_row["win_pct"] = win_pct
-whatif_row["ws"] = ws
-whatif_row["vorp"] = vorp
-whatif_row["bpm"] = bpm
-whatif_row["per"] = per
+    col1, col2 = st.columns([2, 1])
 
-whatif_pred = model.predict(whatif_row.to_frame().T[feature_cols])[0]
-baseline_pred = model.predict(base_row[feature_cols].to_frame().T[feature_cols])[0]
+    with col1:
+        st.subheader("Model's Top 5 Predicted MVP Candidates")
+        display_cols = ['player', 'team', 'predicted_share', 'pts_per_game', 'ws', 'vorp', 'win_pct']
+        st.dataframe(
+            top5[display_cols].rename(columns={
+                'predicted_share': 'Predicted Share', 'pts_per_game': 'PPG',
+                'ws': 'Win Shares', 'vorp': 'VORP', 'win_pct': 'Team Win%'
+            }).reset_index(drop=True),
+            use_container_width=True
+        )
 
-st.metric(
-    "Predicted MVP share (adjusted stats)",
-    f"{whatif_pred:.3f}",
-    delta=f"{whatif_pred - baseline_pred:+.3f} vs. actual stats"
-)
-st.caption(
-    f"For reference, {whatif_player}'s actual {whatif_season} stats predict a share of "
-    f"{baseline_pred:.3f} (actual recorded vote share: {base_row['share']:.3f})."
-)
+    with col2:
+        st.subheader("Actual Result")
+        st.metric("Real MVP Winner", actual_winner)
+        predicted_mvp = top5.iloc[0]['player']
+        if actual_winner != "Not yet available":
+            if predicted_mvp == actual_winner:
+                st.success(f"✅ Correct — model's #1 pick ({predicted_mvp}) matches the actual winner.")
+            else:
+                st.error(f"❌ Missed — model picked {predicted_mvp}, actual winner was {actual_winner}.")
+        else:
+            st.info("Actual result not yet available for this season.")
 
-st.divider()
-st.subheader("2026-27 Season: Real Market Odds")
-st.caption("The model above predicts historical MVP winners from completed-season stats. The 2026-27 season hasn't started yet, so there's no season-average data for it — instead, here's what real sportsbooks currently think, as a preview of who's favored.")
+    st.divider()
+    st.subheader("What drives the model's predictions")
+    importance = pd.Series(model.feature_importances_, index=feature_cols).sort_values(ascending=False).head(10)
+    st.bar_chart(importance)
 
-odds_df = pd.read_csv("data/mvp_odds.csv")
-latest_date = odds_df["as_of_date"].max()
-latest_odds = odds_df[odds_df["as_of_date"] == latest_date].sort_values("consensus_implied_prob", ascending=False)
+    GLOSSARY = {
+        "age": "Player's age during that season",
+        "pts_per_game": "Points per game",
+        "ast_per_game": "Assists per game",
+        "trb_per_game": "Total rebounds per game",
+        "stl_per_game": "Steals per game",
+        "blk_per_game": "Blocks per game",
+        "tov_per_game": "Turnovers per game",
+        "fg_percent": "Field goal percentage",
+        "x3p_percent": "Three-point field goal percentage",
+        "ft_percent": "Free throw percentage",
+        "per": "Player Efficiency Rating — all-in-one per-minute productivity rating, league average = 15",
+        "ts_percent": "True Shooting % — shooting efficiency across 2s, 3s, and free throws combined",
+        "usg_percent": "Usage % — estimated share of team plays used by a player while on the floor",
+        "ows": "Offensive Win Shares — estimated wins contributed through offense",
+        "dws": "Defensive Win Shares — estimated wins contributed through defense",
+        "ws": "Win Shares — total estimated wins contributed (offense + defense)",
+        "ws_48": "Win Shares per 48 minutes — Win Shares rate normalized to a full game",
+        "obpm": "Offensive Box Plus/Minus — offensive points per 100 possessions above a league-average player",
+        "dbpm": "Defensive Box Plus/Minus — same, for defense",
+        "bpm": "Box Plus/Minus — total contribution per 100 possessions above a league-average player",
+        "vorp": "Value Over Replacement Player — total points contributed above a replacement-level player, prorated to an 82-game season",
+        "win_pct": "Team's winning percentage that season",
+        "srs": "Simple Rating System — team rating based on point differential adjusted for strength of schedule",
+    }
 
-st.bar_chart(latest_odds.set_index("player")["consensus_implied_prob"])
-st.dataframe(
-    latest_odds[["player", "consensus_odds_american", "consensus_implied_prob"]]
-    .rename(columns={
-        "player": "Player",
-        "consensus_odds_american": "Consensus Odds",
-        "consensus_implied_prob": "Implied Win Probability"
-    })
-    .set_index("Player"),
-    use_container_width=True
-)
-st.caption(f"Odds as of {latest_date}, averaged across DraftKings, FanDuel, BetMGM, Caesars, and ESPN BET futures markets. Snapshot refreshed periodically, not live.")
+    with st.expander("What do these stats mean?"):
+        glossary_df = pd.DataFrame(
+            [(feat, GLOSSARY.get(feat, "")) for feat in importance.index],
+            columns=["Stat", "Meaning"]
+        )
+        st.table(glossary_df.set_index("Stat"))
 
-seasons = sorted(df['season'].unique(), reverse=True)
-selected_season = st.selectbox("Select a season", seasons)
+    st.caption("Data: NBA Stats (1947-present) by sumitrodatta on Kaggle, sourced from Basketball-Reference.")
 
-season_df = df[df['season'] == selected_season].copy()
-X = season_df[feature_cols].fillna(0)
-season_df['predicted_share'] = model.predict(X)
+# ============================================================
+# TAB 2: 2026-27 Season Market Odds
+# ============================================================
+with tab2:
+    st.subheader("2026-27 Season: Real Market Odds")
+    st.caption("The model above predicts historical MVP winners from completed-season stats. The 2026-27 season hasn't started yet, so there's no season-average data for it — instead, here's what real sportsbooks currently think, as a preview of who's favored.")
 
-top5 = season_df.sort_values('predicted_share', ascending=False).head(5)
-actual_winner_row = season_df[season_df['winner'] == True]
-actual_winner = actual_winner_row['player'].values[0] if len(actual_winner_row) > 0 else "Not yet available"
+    odds_df = pd.read_csv("data/mvp_odds.csv")
+    latest_date = odds_df["as_of_date"].max()
+    latest_odds = odds_df[odds_df["as_of_date"] == latest_date].sort_values("consensus_implied_prob", ascending=False)
 
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    st.subheader("Model's Top 5 Predicted MVP Candidates")
-    display_cols = ['player', 'team', 'predicted_share', 'pts_per_game', 'ws', 'vorp', 'win_pct']
+    st.bar_chart(latest_odds.set_index("player")["consensus_implied_prob"])
     st.dataframe(
-        top5[display_cols].rename(columns={
-            'predicted_share': 'Predicted Share', 'pts_per_game': 'PPG',
-            'ws': 'Win Shares', 'vorp': 'VORP', 'win_pct': 'Team Win%'
-        }).reset_index(drop=True),
+        latest_odds[["player", "consensus_odds_american", "consensus_implied_prob"]]
+        .rename(columns={
+            "player": "Player",
+            "consensus_odds_american": "Consensus Odds",
+            "consensus_implied_prob": "Implied Win Probability"
+        })
+        .set_index("Player"),
         use_container_width=True
     )
+    st.caption(f"Odds as of {latest_date}, averaged across DraftKings, FanDuel, BetMGM, Caesars, and ESPN BET futures markets. Snapshot refreshed periodically, not live.")
 
-with col2:
-    st.subheader("Actual Result")
-    st.metric("Real MVP Winner", actual_winner)
-    predicted_mvp = top5.iloc[0]['player']
-    if actual_winner != "Not yet available":
-        if predicted_mvp == actual_winner:
-            st.success(f"✅ Correct — model's #1 pick ({predicted_mvp}) matches the actual winner.")
-        else:
-            st.error(f"❌ Missed — model picked {predicted_mvp}, actual winner was {actual_winner}.")
-    else:
-        st.info("Actual result not yet available for this season.")
+# ============================================================
+# TAB 3: What-If Explorer
+# ============================================================
+with tab3:
+    st.subheader("What-if: adjust a player's stats")
+    st.caption("Pick a real player-season as a starting point, then tweak key stats to see how the model's predicted MVP share reacts.")
 
-st.divider()
-st.subheader("What drives the model's predictions")
-importance = pd.Series(model.feature_importances_, index=feature_cols).sort_values(ascending=False).head(10)
-st.bar_chart(importance)
+    whatif_col1, whatif_col2 = st.columns(2)
+    with whatif_col1:
+        whatif_season = st.selectbox("Base season", sorted(df["season"].unique(), reverse=True), key="whatif_season")
+    with whatif_col2:
+        season_players = sorted(df[df["season"] == whatif_season]["player"].unique())
+        whatif_player = st.selectbox("Base player", season_players, key="whatif_player")
 
-GLOSSARY = {
-    "age": "Player's age during that season",
-    "pts_per_game": "Points per game",
-    "ast_per_game": "Assists per game",
-    "trb_per_game": "Total rebounds per game",
-    "stl_per_game": "Steals per game",
-    "blk_per_game": "Blocks per game",
-    "tov_per_game": "Turnovers per game",
-    "fg_percent": "Field goal percentage",
-    "x3p_percent": "Three-point field goal percentage",
-    "ft_percent": "Free throw percentage",
-    "per": "Player Efficiency Rating — all-in-one per-minute productivity rating, league average = 15",
-    "ts_percent": "True Shooting % — shooting efficiency across 2s, 3s, and free throws combined",
-    "usg_percent": "Usage % — estimated share of team plays used by a player while on the floor",
-    "ows": "Offensive Win Shares — estimated wins contributed through offense",
-    "dws": "Defensive Win Shares — estimated wins contributed through defense",
-    "ws": "Win Shares — total estimated wins contributed (offense + defense)",
-    "ws_48": "Win Shares per 48 minutes — Win Shares rate normalized to a full game",
-    "obpm": "Offensive Box Plus/Minus — offensive points per 100 possessions above a league-average player",
-    "dbpm": "Defensive Box Plus/Minus — same, for defense",
-    "bpm": "Box Plus/Minus — total contribution per 100 possessions above a league-average player",
-    "vorp": "Value Over Replacement Player — total points contributed above a replacement-level player, prorated to an 82-game season",
-    "win_pct": "Team's winning percentage that season",
-    "srs": "Simple Rating System — team rating based on point differential adjusted for strength of schedule",
-}
+    base_row = df[(df["season"] == whatif_season) & (df["player"] == whatif_player)].iloc[0]
 
-with st.expander("What do these stats mean?"):
-    glossary_df = pd.DataFrame(
-        [(feat, GLOSSARY.get(feat, "")) for feat in importance.index],
-        columns=["Stat", "Meaning"]
+    st.markdown("**Adjust key stats:**")
+    slider_col1, slider_col2 = st.columns(2)
+    with slider_col1:
+        pts = st.slider("Points per game", 0.0, 40.0, float(base_row["pts_per_game"]), 0.1)
+        ast = st.slider("Assists per game", 0.0, 15.0, float(base_row["ast_per_game"]), 0.1)
+        trb = st.slider("Rebounds per game", 0.0, 20.0, float(base_row["trb_per_game"]), 0.1)
+        win_pct = st.slider("Team win %", 0.0, 1.0, float(base_row["win_pct"]), 0.01)
+    with slider_col2:
+        ws = st.slider("Win Shares", 0.0, 20.0, float(base_row["ws"]), 0.1)
+        vorp = st.slider("VORP", -2.0, 12.0, float(base_row["vorp"]), 0.1)
+        bpm = st.slider("Box Plus/Minus", -5.0, 15.0, float(base_row["bpm"]), 0.1)
+        per = st.slider("PER", 0.0, 35.0, float(base_row["per"]), 0.1)
+
+    whatif_row = base_row[feature_cols].copy()
+    whatif_row["pts_per_game"] = pts
+    whatif_row["ast_per_game"] = ast
+    whatif_row["trb_per_game"] = trb
+    whatif_row["win_pct"] = win_pct
+    whatif_row["ws"] = ws
+    whatif_row["vorp"] = vorp
+    whatif_row["bpm"] = bpm
+    whatif_row["per"] = per
+
+    whatif_pred = model.predict(whatif_row.to_frame().T[feature_cols])[0]
+    baseline_pred = model.predict(base_row[feature_cols].to_frame().T[feature_cols])[0]
+
+    st.metric(
+        "Predicted MVP share (adjusted stats)",
+        f"{whatif_pred:.3f}",
+        delta=f"{whatif_pred - baseline_pred:+.3f} vs. actual stats"
     )
-    st.table(glossary_df.set_index("Stat"))
-
-st.caption("Data: NBA Stats (1947-present) by sumitrodatta on Kaggle, sourced from Basketball-Reference.")
+    st.caption(
+        f"For reference, {whatif_player}'s actual {whatif_season} stats predict a share of "
+        f"{baseline_pred:.3f} (actual recorded vote share: {base_row['share']:.3f})."
+    )
