@@ -21,6 +21,55 @@ st.title("🏀 NBA MVP Predictor")
 st.write("Predicting historical NBA MVP winners from player stats using a Random Forest model trained on seasons 1981-2025 (leave-one-season-out validated hit rate: ~71%).")
 
 st.divider()
+st.subheader("What-if: adjust a player's stats")
+st.caption("Pick a real player-season as a starting point, then tweak key stats to see how the model's predicted MVP share reacts.")
+
+whatif_col1, whatif_col2 = st.columns(2)
+with whatif_col1:
+    whatif_season = st.selectbox("Base season", sorted(df["season"].unique(), reverse=True), key="whatif_season")
+with whatif_col2:
+    season_players = sorted(df[df["season"] == whatif_season]["player"].unique())
+    whatif_player = st.selectbox("Base player", season_players, key="whatif_player")
+
+base_row = df[(df["season"] == whatif_season) & (df["player"] == whatif_player)].iloc[0]
+
+st.markdown("**Adjust key stats:**")
+slider_col1, slider_col2 = st.columns(2)
+with slider_col1:
+    pts = st.slider("Points per game", 0.0, 40.0, float(base_row["pts_per_game"]), 0.1)
+    ast = st.slider("Assists per game", 0.0, 15.0, float(base_row["ast_per_game"]), 0.1)
+    trb = st.slider("Rebounds per game", 0.0, 20.0, float(base_row["trb_per_game"]), 0.1)
+    win_pct = st.slider("Team win %", 0.0, 1.0, float(base_row["win_pct"]), 0.01)
+with slider_col2:
+    ws = st.slider("Win Shares", 0.0, 20.0, float(base_row["ws"]), 0.1)
+    vorp = st.slider("VORP", -2.0, 12.0, float(base_row["vorp"]), 0.1)
+    bpm = st.slider("Box Plus/Minus", -5.0, 15.0, float(base_row["bpm"]), 0.1)
+    per = st.slider("PER", 0.0, 35.0, float(base_row["per"]), 0.1)
+
+whatif_row = base_row[feature_cols].copy()
+whatif_row["pts_per_game"] = pts
+whatif_row["ast_per_game"] = ast
+whatif_row["trb_per_game"] = trb
+whatif_row["win_pct"] = win_pct
+whatif_row["ws"] = ws
+whatif_row["vorp"] = vorp
+whatif_row["bpm"] = bpm
+whatif_row["per"] = per
+
+whatif_pred = model.predict(whatif_row.to_frame().T[feature_cols])[0]
+baseline_pred = model.predict(base_row[feature_cols].to_frame().T[feature_cols])[0]
+
+st.metric(
+    "Predicted MVP share (adjusted stats)",
+    f"{whatif_pred:.3f}",
+    delta=f"{whatif_pred - baseline_pred:+.3f} vs. actual stats"
+)
+st.caption(
+    f"For reference, {whatif_player}'s actual {whatif_season} stats predict a share of "
+    f"{baseline_pred:.3f} (actual recorded vote share: {base_row['share']:.3f})."
+)
+
+st.divider()
 st.subheader("2026-27 Season: Real Market Odds")
 st.caption("The model above predicts historical MVP winners from completed-season stats. The 2026-27 season hasn't started yet, so there's no season-average data for it — instead, here's what real sportsbooks currently think, as a preview of who's favored.")
 
