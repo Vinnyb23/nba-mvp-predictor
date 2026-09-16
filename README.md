@@ -59,6 +59,34 @@ Other: age
 
 VORP, Win Shares, BPM, and PER were the strongest individual correlates with MVP vote share — consistent with findings from other public MVP-prediction projects.
 
+## Feature glossary
+
+| Feature | Meaning |
+|---|---|
+| `age` | Player's age during that season |
+| `pts_per_game` | Points per game |
+| `ast_per_game` | Assists per game |
+| `trb_per_game` | Total rebounds per game |
+| `stl_per_game` | Steals per game |
+| `blk_per_game` | Blocks per game |
+| `tov_per_game` | Turnovers per game |
+| `fg_percent` | Field goal percentage |
+| `x3p_percent` | Three-point field goal percentage |
+| `ft_percent` | Free throw percentage |
+| `per` | **Player Efficiency Rating** — an all-in-one per-minute rating of a player's productivity, adjusted so league average is 15 |
+| `ts_percent` | **True Shooting %** — shooting efficiency that accounts for 2-pointers, 3-pointers, and free throws together |
+| `usg_percent` | **Usage %** — estimated share of a team's offensive plays used by a player while on the floor |
+| `ows` | **Offensive Win Shares** — estimated wins contributed through offense |
+| `dws` | **Defensive Win Shares** — estimated wins contributed through defense |
+| `ws` | **Win Shares** — total estimated wins contributed (offensive + defensive) |
+| `ws_48` | **Win Shares per 48 minutes** — Win Shares rate normalized to a full 48-minute game |
+| `obpm` | **Offensive Box Plus/Minus** — estimated offensive points per 100 possessions contributed above a league-average player |
+| `dbpm` | **Defensive Box Plus/Minus** — same, for defense |
+| `bpm` | **Box Plus/Minus** — total estimated contribution per 100 possessions above a league-average player |
+| `vorp` | **Value Over Replacement Player** — converts BPM into total points contributed above a replacement-level player, prorated to an 82-game season |
+| `win_pct` | Team's winning percentage that season |
+| `srs` | **Simple Rating System** — a team rating based on average point differential adjusted for strength of schedule |
+
 ## App
 
 A Streamlit app lets you pick any season from 1981–2025 and see:
@@ -66,4 +94,53 @@ A Streamlit app lets you pick any season from 1981–2025 and see:
 - The actual MVP winner for that season, with a clear correct/missed indicator
 - Which stats the model weighs most heavily (feature importance chart)
 
+## Market odds comparison (2026-27 season)
+
+The trained model only predicts *completed* seasons — it needs a full season of stats to generate features, so it can't produce a meaningful prediction for a season that hasn't been played yet. To still give a sense of "who's favored right now" during an active season, the app includes a separate panel showing real sportsbook MVP futures odds (DraftKings, FanDuel, BetMGM, Caesars, ESPN BET), averaged into a consensus implied win probability per player.
+
+This is a periodically-refreshed snapshot (`data/mvp_odds.csv`), not a live feed — it's manually updated by re-pulling current odds and appending a new dated row per player, which also builds up a history of how the market's favorites shift over the course of a season.
+
+| Player (as of 2026-09-15) | Consensus Odds | Implied Win Probability |
+|---|---|---|
+| Victor Wembanyama | +200 | 33.4% |
+| Shai Gilgeous-Alexander | +375 | 21.2% |
+| Nikola Jokic | +525 | 16.2% |
+| Luka Doncic | +600 | 14.4% |
+| Giannis Antetokounmpo | +1080 | 8.5% |
+| Jayson Tatum | +1720 | 5.6% |
+| Anthony Edwards | +1760 | 5.5% |
+| Cade Cunningham | +2500 | 3.9% |
+
 ## Repository structure
+
+nba-mvp-predictor/
+├── data/
+│ ├── processed/
+│ │ └── mvp_model_data.csv # cleaned, modeling-ready season-level table
+│ └── mvp_odds.csv # periodically-refreshed sportsbook MVP futures odds snapshot
+├── notebooks/ # data prep, EDA, and modeling notebooks (Colab)
+├── src/ # reusable data prep / feature / training scripts
+├── app/
+│ └── streamlit_app.py # the deployed Streamlit app
+├── models/
+│ ├── rf_mvp_model.joblib # trained Random Forest model
+│ └── feature_cols.joblib # feature list used at inference time
+├── requirements.txt
+└── README.md
+
+
+## Running locally
+
+```bash
+pip install -r requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+## Limitations & future work
+
+- The model only uses box-score-derived stats; it can't capture narrative factors (media storylines, "turn"/fatigue effects, close-race voter fatigue) that occasionally swing real voting, which explains most of its misses (e.g., 2018, 2019, 2020, 2023, 2025).
+- Potential next steps: automating the odds refresh with a live odds API and personal API key (currently a manually-updated snapshot), incorporating additional context like strength of schedule or clutch-performance stats, and exploring whether a simplified live in-season model (using only stats available mid-season) could complement the market-odds view.
+
+## Acknowledgments
+
+Built as a personal learning project to understand end-to-end applied machine learning: data acquisition, feature engineering, model comparison, rigorous cross-validation, and deployment.
