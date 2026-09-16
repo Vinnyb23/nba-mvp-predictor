@@ -20,9 +20,6 @@ df = load_data()
 st.title("🏀 NBA MVP Predictor")
 st.write("Predicting historical NBA MVP winners from player stats using a Random Forest model trained on seasons 1981-2025 (leave-one-season-out validated hit rate: ~71%).")
 
-seasons = sorted(df['season'].unique(), reverse=True)
-selected_season = st.selectbox("Select a season", seasons)
-
 st.divider()
 st.subheader("2026-27 Season: Real Market Odds")
 st.caption("The model above predicts historical MVP winners from completed-season stats. The 2026-27 season hasn't started yet, so there's no season-average data for it — instead, here's what real sportsbooks currently think, as a preview of who's favored.")
@@ -43,6 +40,9 @@ st.dataframe(
     use_container_width=True
 )
 st.caption(f"Odds as of {latest_date}, averaged across DraftKings, FanDuel, BetMGM, Caesars, and ESPN BET futures markets. Snapshot refreshed periodically, not live.")
+
+seasons = sorted(df['season'].unique(), reverse=True)
+selected_season = st.selectbox("Select a season", seasons)
 
 season_df = df[df['season'] == selected_season].copy()
 X = season_df[feature_cols].fillna(0)
