@@ -128,7 +128,6 @@ nba-mvp-predictor/
 ├── requirements.txt
 └── README.md
 
-
 ## Running locally
 
 ```bash
