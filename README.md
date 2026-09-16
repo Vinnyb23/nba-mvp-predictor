@@ -112,7 +112,7 @@ This is a periodically-refreshed snapshot (`data/mvp_odds.csv`), not a live feed
 | Cade Cunningham | +2500 | 3.9% |
 
 ## Repository structure
-'''
+```
 nba-mvp-predictor/
 ├── data/
 │ ├── processed/
@@ -127,7 +127,8 @@ nba-mvp-predictor/
 │ └── feature_cols.joblib # feature list used at inference time
 ├── requirements.txt
 └── README.md
-'''
+```
+
 ## Running locally
 
 ```bash
