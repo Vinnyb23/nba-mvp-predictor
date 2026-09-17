@@ -2,7 +2,7 @@
 
 A machine learning project that predicts historical NBA Most Valuable Player winners from player and team statistics — built end-to-end in Python, from raw historical data to a deployed interactive app.
 
-**Live app:** (https://nba-mvp-predictor-5k83qxa87cdfxnuxphravg.streamlit.app/)
+**Live app:** _add your Streamlit Cloud URL here_
 
 ## Overview
 
@@ -89,14 +89,16 @@ VORP, Win Shares, BPM, and PER were the strongest individual correlates with MVP
 
 ## App
 
-A Streamlit app lets you pick any season from 1981–2025 and see:
-- The model's top 5 predicted MVP candidates, ranked by predicted vote share
-- The actual MVP winner for that season, with a clear correct/missed indicator
-- Which stats the model weighs most heavily (feature importance chart)
+The Streamlit app is organized into three tabs:
 
-## Market odds comparison (2026-27 season)
+### Tab 1: Model's Top 5 Predictions
+- Pick any season from 1981–2025
+- See the model's top 5 predicted MVP candidates, ranked by predicted vote share, alongside PPG, Win Shares, VORP, and team win%
+- See the actual MVP winner for that season, with a clear correct/missed indicator
+- Explore "What drives the model's predictions" — a feature importance chart with a "What do these stats mean?" glossary expander
 
-The trained model only predicts *completed* seasons — it needs a full season of stats to generate features, so it can't produce a meaningful prediction for a season that hasn't been played yet. To still give a sense of "who's favored right now" during an active season, the app includes a separate panel showing real sportsbook MVP futures odds (DraftKings, FanDuel, BetMGM, Caesars, ESPN BET), averaged into a consensus implied win probability per player.
+### Tab 2: 2026-27 Market Odds
+The trained model only predicts *completed* seasons — it needs a full season of stats to generate features, so it can't produce a meaningful prediction for a season that hasn't been played yet. To still give a sense of "who's favored right now" during an active season, this tab shows real sportsbook MVP futures odds (DraftKings, FanDuel, BetMGM, Caesars, ESPN BET), averaged into a consensus implied win probability per player.
 
 This is a periodically-refreshed snapshot (`data/mvp_odds.csv`), not a live feed — it's manually updated by re-pulling current odds and appending a new dated row per player, which also builds up a history of how the market's favorites shift over the course of a season.
 
@@ -111,20 +113,26 @@ This is a periodically-refreshed snapshot (`data/mvp_odds.csv`), not a live feed
 | Anthony Edwards | +1760 | 5.5% |
 | Cade Cunningham | +2500 | 3.9% |
 
+### Tab 3: What-If Explorer
+- Pick any historical player-season as a starting point
+- Adjust key stats (points, assists, rebounds, team win%, Win Shares, VORP, BPM, PER) with sliders
+- See how the model's predicted MVP share reacts, compared to that player's real recorded stats and vote share — a hands-on way to see what the model actually weighs
+
 ## Repository structure
+
 ```
 nba-mvp-predictor/
 ├── data/
-│ ├── processed/
-│ │ └── mvp_model_data.csv # cleaned, modeling-ready season-level table
-│ └── mvp_odds.csv # periodically-refreshed sportsbook MVP futures odds snapshot
-├── notebooks/ # data prep, EDA, and modeling notebooks (Colab)
-├── src/ # reusable data prep / feature / training scripts
+│   ├── processed/
+│   │   └── mvp_model_data.csv   # cleaned, modeling-ready season-level table
+│   └── mvp_odds.csv             # periodically-refreshed sportsbook MVP futures odds snapshot
+├── notebooks/                    # data prep, EDA, and modeling notebooks (Colab)
+├── src/                          # reusable data prep / feature / training scripts
 ├── app/
-│ └── streamlit_app.py # the deployed Streamlit app
+│   └── streamlit_app.py          # the deployed Streamlit app
 ├── models/
-│ ├── rf_mvp_model.joblib # trained Random Forest model
-│ └── feature_cols.joblib # feature list used at inference time
+│   ├── rf_mvp_model.joblib        # trained Random Forest model
+│   └── feature_cols.joblib        # feature list used at inference time
 ├── requirements.txt
 └── README.md
 ```
@@ -139,7 +147,7 @@ streamlit run app/streamlit_app.py
 ## Limitations & future work
 
 - The model only uses box-score-derived stats; it can't capture narrative factors (media storylines, "turn"/fatigue effects, close-race voter fatigue) that occasionally swing real voting, which explains most of its misses (e.g., 2018, 2019, 2020, 2023, 2025).
-- Potential next steps: automating the odds refresh with a live odds API and personal API key (currently a manually-updated snapshot), incorporating additional context like strength of schedule or clutch-performance stats, and exploring whether a simplified live in-season model (using only stats available mid-season) could complement the market-odds view.
+- Potential next steps: automating the odds refresh with a live odds API and personal API key (currently a manually-updated snapshot), incorporating additional context like strength of schedule or clutch-performance stats, and adding experiment tracking (e.g. MLflow) to log model versions and metrics as the project evolves.
 
 ## Acknowledgments
 
